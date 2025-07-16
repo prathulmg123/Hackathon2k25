@@ -21,14 +21,33 @@ interface ShootingStar {
   maxTrail: number;
 }
 
+interface Rocket {
+  id: number;
+  x: number;
+  y: number;
+  speed: number;
+  angle: number;
+  size: number;
+  opacity: number;
+  lastFlameTime: number;
+  flameSize: number;
+}
+
 const StarField = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const starsRef = useRef<Star[]>([]);
   const shootingStarsRef = useRef<ShootingStar[]>([]);
+  const rocketsRef = useRef<Rocket[]>([]);
+  const rocketIdRef = useRef<number>(0);
   const animationRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
   const lastShootingStarTime = useRef<number>(0);
   const shootingStarInterval = useRef<number>(1000); // Time between shooting star spawns
+  const lastRocketTime = useRef<number>(0);
+  const rocketInterval = useRef<number>(2000); // Time between rocket groups
+  const rocketGroupCount = useRef<number>(0); // Track how many rockets in current group
+  const maxRocketsPerGroup = 1; // Number of rockets per group
+  const timeBetweenRockets = 2000; // Time between rockets in a group (ms)
 
   const initStars = useCallback((canvas: HTMLCanvasElement) => {
     const stars: Star[] = [];
@@ -113,6 +132,102 @@ const StarField = () => {
     });
   }, []);
 
+  const createRocket = useCallback((canvas: HTMLCanvasElement) => {
+    const rocketId = rocketIdRef.current++;
+    // Randomly choose which side the rocket will enter from
+    const side = Math.floor(Math.random() * 4);
+    let x, y, angle;
+    
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    
+    // Set initial position and angle based on which side the rocket enters from
+    switch (side) {
+      case 0: // Top
+        x = Math.random() * canvas.width;
+        y = -50;
+        // Calculate angle to center
+        angle = Math.atan2(centerY - y, centerX - x) + Math.PI/2;
+        break;
+      case 1: // Right
+        x = canvas.width + 50;
+        y = Math.random() * canvas.height;
+        // Calculate angle to center
+        angle = Math.atan2(centerY - y, centerX - x) + Math.PI/2;
+        break;
+      case 2: // Bottom
+        x = Math.random() * canvas.width;
+        y = canvas.height + 50;
+        // Calculate angle to center
+        angle = Math.atan2(centerY - y, centerX - x) + Math.PI/2;
+        break;
+      case 3: // Left
+        x = -50;
+        y = Math.random() * canvas.height;
+        // Calculate angle to center
+        angle = Math.atan2(centerY - y, centerX - x) + Math.PI/2;
+        break;
+      default:
+        x = 0;
+        y = 0;
+        angle = 0;
+    }
+    
+    return {
+      id: rocketId,
+      x,
+      y,
+      speed: 3 + Math.random() * 2,
+      angle,
+      size: 3 + Math.random() * 2,
+      opacity: 0.9 + Math.random() * 0.1,
+      lastFlameTime: Date.now(),
+      flameSize: 1
+    };
+  }, []);
+
+  const drawRocket = useCallback((ctx: CanvasRenderingContext2D, rocket: Rocket) => {
+    // Update flame animation
+    const now = Date.now();
+    if (now - rocket.lastFlameTime > 50) { // Change flame size every 50ms
+      rocket.flameSize = 1 + Math.random() * 0.5; // Random flame size between 1-1.5
+      rocket.lastFlameTime = now;
+    }
+    
+    // Save context
+    ctx.save();
+    ctx.translate(rocket.x, rocket.y);
+    ctx.rotate(rocket.angle);
+    
+    // Draw flame
+    const flameLength = rocket.size * 3 * rocket.flameSize;
+    ctx.beginPath();
+    ctx.moveTo(-rocket.size, 0);
+    ctx.lineTo(rocket.size, 0);
+    ctx.lineTo(0, flameLength);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(255, 165, 0, ${rocket.opacity * 0.7})`;
+    ctx.fill();
+    
+    // Draw rocket body
+    ctx.beginPath();
+    ctx.arc(0, 0, rocket.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 255, 255, ${rocket.opacity})`;
+    ctx.fill();
+    
+    // Add a small glow
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+    ctx.shadowBlur = 5;
+    ctx.beginPath();
+    ctx.arc(0, 0, rocket.size * 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 255, 255, ${rocket.opacity * 0.3})`;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    // Restore context
+    ctx.restore();
+  }, []);
+
   const animate = useCallback((timestamp: number) => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -162,6 +277,42 @@ const StarField = () => {
       shootingStarInterval.current = 500 + Math.random() * 1500;
     }
 
+    // Create new rocket group if needed
+    if (timestamp - lastRocketTime.current > rocketInterval.current) {
+      if (rocketGroupCount.current < maxRocketsPerGroup) {
+        // Add a new rocket to the current group
+        rocketsRef.current.push(createRocket(canvas));
+        rocketGroupCount.current++;
+        // Schedule next rocket in the group
+        lastRocketTime.current = timestamp;
+        rocketInterval.current = timeBetweenRockets;
+      } else {
+        // Reset for next group
+        rocketGroupCount.current = 0;
+        lastRocketTime.current = timestamp;
+        rocketInterval.current = 2000; // 2 seconds until next group
+      }
+    }
+    
+    // Update and draw all rockets
+    rocketsRef.current = rocketsRef.current.filter(rocket => {
+      // Move rocket
+      rocket.x += Math.cos(rocket.angle - Math.PI/2) * rocket.speed;
+      rocket.y += Math.sin(rocket.angle - Math.PI/2) * rocket.speed;
+      
+      // Draw rocket
+      drawRocket(ctx, rocket);
+      
+      // Remove rocket if it's out of bounds
+      const buffer = 100;
+      return !(
+        rocket.x < -buffer ||
+        rocket.x > canvas.width + buffer ||
+        rocket.y < -buffer ||
+        rocket.y > canvas.height + buffer
+      );
+    });
+    
     // Update and draw shooting stars
     shootingStarsRef.current = shootingStarsRef.current.filter(star => {
       // Update position
@@ -205,7 +356,7 @@ const StarField = () => {
     });
     
     animationRef.current = requestAnimationFrame(animate);
-  }, [createShootingStar]);
+  }, [createShootingStar, createRocket, drawRocket]);
 
   // Handle window resize and initial setup
   useEffect(() => {
