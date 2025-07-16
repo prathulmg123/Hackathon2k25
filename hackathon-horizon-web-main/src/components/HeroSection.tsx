@@ -1,5 +1,54 @@
 import { Button } from "@/components/ui/button";
 import { Calendar, Users, Trophy, Rocket } from "lucide-react";
+import { useEffect, useRef } from "react";
+
+// WavyText component for the wave animation
+const WavyText = ({ text, className = "", gradient = false }: { text: string; className?: string; gradient?: boolean }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Split text into individual characters
+    const chars = text.split('');
+    containerRef.current.innerHTML = ''; // Clear any existing content
+    
+    // Create a span for each character with animation
+    chars.forEach((char, i) => {
+      const charSpan = document.createElement('span');
+      charSpan.textContent = char === ' ' ? '\u00A0' : char;
+      charSpan.style.display = 'inline-block';
+      charSpan.style.transition = 'transform 0.3s ease';
+      charSpan.style.animation = `wave 2s ease-in-out ${i * 0.05}s infinite`;
+      // Preserve gradient if specified
+      if (gradient) {
+        charSpan.style.background = 'inherit';
+        charSpan.style.backgroundClip = 'text';
+        charSpan.style.webkitBackgroundClip = 'text';
+        charSpan.style.webkitTextFillColor = 'transparent';
+      }
+      containerRef.current?.appendChild(charSpan);
+    });
+
+    // Add keyframes for wave animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes wave {
+        0%, 100% { transform: translateY(0); }
+        25% { transform: translateY(-10px); }
+        50% { transform: translateY(0); }
+        75% { transform: translateY(5px); }
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [text, gradient]);
+
+  return <span ref={containerRef} className={`inline-block ${gradient ? 'bg-gradient-to-r from-primary via-primary-glow to-accent' : ''} ${className}`} />;
+};
 
 const HeroSection = () => {
   return (
@@ -8,11 +57,11 @@ const HeroSection = () => {
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Main heading with enhanced glow */}
           <div className="space-y-4">
-            <h1 data-animate="pulse-glow" className="text-7xl md:text-9xl font-black text-transparent bg-gradient-to-r from-primary via-primary-glow to-accent bg-clip-text">
-              HACKATHON
+            <h1 data-animate="scale-in" className="text-7xl md:text-8xl font-black">
+              <WavyText text="HACKATHON" className="text-white"/>
             </h1>
-            <div data-animate="scale-in" className="text-6xl md:text-8xl font-black text-glow">
-              2025
+            <div data-animate="scale-in" className="text-6xl md:text-6xl font-black text-glow">
+              <WavyText text="2025" className="text-white" />
             </div>
           </div>
 

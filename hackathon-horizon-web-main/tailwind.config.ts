@@ -66,8 +66,17 @@ export default {
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
 				'gradient-background': 'var(--gradient-background)',
-				'gradient-card': 'var(--gradient-card)'
-			},
+				'gradient-card': 'var(--gradient-card)',
+			  
+				// 🌌 Cosmic gradient for hackathon hero
+				'gradient-cosmic': 'linear-gradient(180deg, #1c0b2b85 0%, #240d3f3d 35%, #320b50b8 100%)'
+			  },
+			  
+			// backgroundImage: {
+			// 	'gradient-primary': 'var(--gradient-primary)',
+			// 	'gradient-background': 'var(--gradient-background)',
+			// 	'gradient-card': 'var(--gradient-card)'
+			// },
 			boxShadow: {
 				'glow-primary': 'var(--glow-primary)',
 				'glow-accent': 'var(--glow-accent)'

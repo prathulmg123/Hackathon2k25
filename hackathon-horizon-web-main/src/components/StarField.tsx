@@ -33,18 +33,33 @@ interface Rocket {
   flameSize: number;
 }
 
+interface Spaceship {
+  x: number;
+  y: number;
+  size: number;
+  speed: number;
+  vx: number;
+  vy: number;
+  angle: number;
+  color: string;
+  isFast: boolean;
+}
+
 const StarField = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const starsRef = useRef<Star[]>([]);
   const shootingStarsRef = useRef<ShootingStar[]>([]);
   const rocketsRef = useRef<Rocket[]>([]);
+  const spaceshipsRef = useRef<Spaceship[]>([]);
   const rocketIdRef = useRef<number>(0);
   const animationRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
   const lastShootingStarTime = useRef<number>(0);
   const shootingStarInterval = useRef<number>(1000); // Time between shooting star spawns
   const lastRocketTime = useRef<number>(0);
-  const rocketInterval = useRef<number>(2000); // Time between rocket groups
+  const lastSpaceshipTime = useRef<number>(0);
+  const spaceshipInterval = useRef<number>(200); // Time between spaceship spawns
+  const rocketInterval = useRef<number>(3000); // Time between rocket groups
   const rocketGroupCount = useRef<number>(0); // Track how many rockets in current group
   const maxRocketsPerGroup = 1; // Number of rockets per group
   const timeBetweenRockets = 2000; // Time between rockets in a group (ms)
@@ -228,6 +243,115 @@ const StarField = () => {
     ctx.restore();
   }, []);
 
+  const createSpaceship = useCallback((canvas: HTMLCanvasElement) => {
+    const size = 12 + Math.random() * 10; // Smaller size for streak effect
+    const isFast = Math.random() > 0.7; // 30% chance to be a fast (red/orange) ship
+    
+    // Fast ships are red/orange, others are blue/cyan
+    const colors = isFast 
+      ? ['#ff3d00', '#ff6d00', '#ff9100'] 
+      : ['#00b0ff', '#00e5ff', '#18ffff'];
+    
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    
+    // Fast ships are 2-3x faster
+    const baseSpeed = isFast ? 8 + Math.random() * 4 : 3 + Math.random() * 3;
+    
+    const side = Math.floor(Math.random() * 4);
+    let x, y, angle, vx, vy;
+
+    // Define entry point and velocity
+    switch (side) {
+      case 0: // Top
+        x = Math.random() * canvas.width;
+        y = -size;
+        angle = Math.PI / 2 + (Math.random() * 0.4 - 0.2);
+        vx = (Math.random() - 0.5) * 2 * baseSpeed * 0.2;
+        vy = baseSpeed;
+        break;
+      case 1: // Right
+        x = canvas.width + size;
+        y = Math.random() * canvas.height;
+        angle = Math.PI + (Math.random() * 0.4 - 0.2);
+        vx = -baseSpeed;
+        vy = (Math.random() - 0.5) * 2 * baseSpeed * 0.2;
+        break;
+      case 2: // Bottom
+        x = Math.random() * canvas.width;
+        y = canvas.height + size;
+        angle = -Math.PI / 2 + (Math.random() * 0.4 - 0.2);
+        vx = (Math.random() - 0.5) * 2 * baseSpeed * 0.2;
+        vy = -baseSpeed;
+        break;
+      default: // Left
+        x = -size;
+        y = Math.random() * canvas.height;
+        angle = 0 + (Math.random() * 0.4 - 0.2);
+        vx = baseSpeed;
+        vy = (Math.random() - 0.5) * 2 * baseSpeed * 0.2;
+    }
+
+    return {
+      x,
+      y,
+      size,
+      speed: baseSpeed,
+      vx,
+      vy,
+      angle,
+      color,
+      isFast
+    };
+  }, []);
+
+  const drawSpaceship = useCallback((ctx: CanvasRenderingContext2D, ship: Spaceship) => {
+    ctx.save();
+    
+    // Create a glowing trail effect
+    const gradient = ctx.createLinearGradient(
+      ship.x - ship.vx * 2, 
+      ship.y - ship.vy * 2,
+      ship.x - ship.vx * 10, 
+      ship.y - ship.vy * 10
+    );
+    
+    // Adjust trail length based on speed
+    const trailLength = ship.isFast ? 15 : 8;
+    const opacity = ship.isFast ? 0.8 : 0.6;
+    
+    gradient.addColorStop(0, `${ship.color}00`);
+    gradient.addColorStop(0.3, `${ship.color}${Math.floor(opacity * 50).toString(16).padStart(2, '0')}`);
+    gradient.addColorStop(1, `${ship.color}${Math.floor(opacity * 255).toString(16).padStart(2, '0')}`);
+    
+    // Draw the trail
+    ctx.beginPath();
+    ctx.moveTo(ship.x, ship.y);
+    ctx.lineTo(ship.x - ship.vx * trailLength, ship.y - ship.vy * trailLength);
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = ship.isFast ? 2.5 : 1.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    
+    // Draw the main body (just a bright dot)
+    const bodyGradient = ctx.createRadialGradient(
+      ship.x, ship.y, 0,
+      ship.x, ship.y, ship.size * 0.6
+    );
+    bodyGradient.addColorStop(0, ship.color);
+    bodyGradient.addColorStop(1, `${ship.color}66`);
+    
+    ctx.beginPath();
+    ctx.arc(ship.x, ship.y, ship.size * 0.6, 0, Math.PI * 2);
+    ctx.fillStyle = bodyGradient;
+    ctx.fill();
+    
+    // Update position
+    ship.x += ship.vx;
+    ship.y += ship.vy;
+    
+    ctx.restore();
+  }, []);
+
   const animate = useCallback((timestamp: number) => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -294,6 +418,16 @@ const StarField = () => {
       }
     }
     
+    // Create new spaceship if needed
+    if (timestamp - lastSpaceshipTime.current > spaceshipInterval.current) {
+      if (canvas) {
+        spaceshipsRef.current.push(createSpaceship(canvas));
+        lastSpaceshipTime.current = timestamp;
+        // Random interval between 8-15 seconds for next spaceship
+        spaceshipInterval.current = 8000 + Math.random() * 7000;
+      }
+    }
+    
     // Update and draw all rockets
     rocketsRef.current = rocketsRef.current.filter(rocket => {
       // Move rocket
@@ -311,6 +445,23 @@ const StarField = () => {
         rocket.y < -buffer ||
         rocket.y > canvas.height + buffer
       );
+    });
+    
+    // Update and draw all spaceships
+    spaceshipsRef.current = spaceshipsRef.current.filter(ship => {
+      // Draw spaceship
+      drawSpaceship(ctx, ship);
+      
+      // Remove if out of bounds with some buffer
+      const buffer = 200; // Increased buffer to ensure smooth exit
+      const outOfBounds = (
+        ship.x < -buffer ||
+        ship.x > canvas.width + buffer ||
+        ship.y < -buffer ||
+        ship.y > canvas.height + buffer
+      );
+      
+      return !outOfBounds;
     });
     
     // Update and draw shooting stars
@@ -356,7 +507,7 @@ const StarField = () => {
     });
     
     animationRef.current = requestAnimationFrame(animate);
-  }, [createShootingStar, createRocket, drawRocket]);
+  }, [createShootingStar, createRocket, drawRocket, createSpaceship, drawSpaceship]);
 
   // Handle window resize and initial setup
   useEffect(() => {

@@ -53,7 +53,7 @@ const AllInfoSection = () => {
   ];
 
   return (
-    <section id="all-info" className="flex-shrink-0 w-screen h-screen flex items-center justify-center px-8 pt-24 md:pt-32">
+    <section id="all-info" className="bg-gradient-cosmic flex-shrink-0 w-screen h-screen flex items-center justify-center px-8 pt-24 md:pt-32">
       <div className="max-w-6xl mx-auto text-center">
         <div className="space-y-8">
           <div className="space-y-4">

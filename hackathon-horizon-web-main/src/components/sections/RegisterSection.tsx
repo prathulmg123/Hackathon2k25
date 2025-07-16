@@ -3,7 +3,7 @@ import { Calendar, Users, Trophy } from "lucide-react";
 
 const RegisterSection = () => {
   return (
-    <section id="register" className="flex-shrink-0 w-screen h-screen flex items-center justify-center px-8">
+    <section id="register" className="bg-gradient-cosmic flex-shrink-0 w-screen h-screen flex items-center justify-center px-8">
       <div className="max-w-4xl mx-auto text-center">
         <div className="space-y-8">
           <div className="space-y-4">

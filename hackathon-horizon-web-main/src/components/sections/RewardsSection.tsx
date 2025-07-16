@@ -33,7 +33,7 @@ const RewardsSection = () => {
   ];
 
   return (
-    <section id="rewards" className="flex-shrink-0 w-screen h-screen flex items-center justify-center px-8">
+    <section id="rewards" className="flex-shrink-0 w-screen h-screen flex items-center justify-center px-8 bg-gradient-cosmic" >
       <div className="max-w-6xl mx-auto text-center">
         <div className="space-y-8">
           <div className="space-y-4">
