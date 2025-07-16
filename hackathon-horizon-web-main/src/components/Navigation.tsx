@@ -45,12 +45,6 @@ const Navigation = () => {
                 {item.label}
               </a>
             ))}
-            
-            {/* Language Switcher */}
-            <div className="flex items-center space-x-2 text-muted-foreground">
-              <Globe className="w-4 h-4" />
-              <span className="text-sm">EN</span>
-            </div>
           </div>
 
           {/* Mobile Menu Button */}

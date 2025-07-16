@@ -271,20 +271,40 @@
 
   /* Horizontal scroll styles */
   .horizontal-scroll-container {
-    display: flex;
-    width: max-content;
-    height: 100vh;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    @apply w-full h-screen flex overflow-x-auto snap-x snap-mandatory scroll-smooth;
+    -ms-overflow-style: none;  /* Hide scrollbar for IE and Edge */
+    scrollbar-width: none;  /* Hide scrollbar for Firefox */
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    overscroll-behavior-x: contain; /* Prevent scroll chaining */
   }
 
+  /* Hide scrollbar for Chrome, Safari and Opera */
   .horizontal-scroll-container::-webkit-scrollbar {
     display: none;
   }
 
-  .horizontal-scroll-container > section {
+  /* Ensure sections take full viewport width and height */
+  .horizontal-scroll-container > * {
+    @apply w-screen h-screen flex-shrink-0 snap-start overflow-y-auto;
     scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  /* Smooth scrolling for all elements */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Optional: Add a subtle transition for smoother visual feedback */
+  .horizontal-scroll-container > * {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+
+  /* Optional: Add a subtle scale effect on active section */
+  .horizontal-scroll-container > *:target {
+    transform: scale(0.98);
+    opacity: 0.9;
   }
 
   /* Hero text animation */
